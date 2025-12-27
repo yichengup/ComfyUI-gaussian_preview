@@ -99,6 +99,9 @@ app.registerExtension({
                     iframeLoaded = true;
                 });
 
+                // Store node reference for message handler
+                const currentNode = this;
+
                 // Listen for messages from iframe
                 window.addEventListener('message', async (event) => {
                     // Handle screenshot messages
@@ -141,6 +144,75 @@ app.registerExtension({
 
                         } catch (error) {
                             console.error('[YCGaussianPreview] Error saving screenshot:', error);
+                        }
+                    }
+                    // Handle video recording messages
+                    else if (event.data.type === 'VIDEO_RECORDING' && event.data.video) {
+                        try {
+                            console.log('[YCGaussianPreview] Received video recording, MIME type:', event.data.mimeType);
+                            
+                            // Convert base64 data URL to blob
+                            const base64Data = event.data.video.split(',')[1];
+                            const byteString = atob(base64Data);
+                            const arrayBuffer = new ArrayBuffer(byteString.length);
+                            const uint8Array = new Uint8Array(arrayBuffer);
+
+                            for (let i = 0; i < byteString.length; i++) {
+                                uint8Array[i] = byteString.charCodeAt(i);
+                            }
+
+                            // Force MP4 extension (we're using MP4 format now)
+                            const extension = 'mp4';
+
+                            const blob = new Blob([uint8Array], { type: 'video/mp4' });
+
+                            // Generate filename with timestamp
+                            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                            const filename = `gaussian-recording-${timestamp}.${extension}`;
+
+                            // Create FormData for upload
+                            const formData = new FormData();
+                            formData.append('image', blob, filename);
+                            formData.append('type', 'output');
+                            formData.append('subfolder', '');
+
+                            // Upload to ComfyUI backend
+                            const response = await fetch('/upload/image', {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            if (response.ok) {
+                                const result = await response.json();
+                                console.log('[YCGaussianPreview] Video saved:', result.name);
+                                
+                                // Show success message in info panel
+                                if (infoPanel) {
+                                    const originalContent = infoPanel.innerHTML;
+                                    infoPanel.innerHTML = `<div style="color: #6cc;">Video saved: ${result.name}</div><div style="color: #888; font-size: 9px; margin-top: 2px;">Click "Run" to update video output</div>`;
+                                    setTimeout(() => {
+                                        infoPanel.innerHTML = originalContent;
+                                    }, 5000);
+                                }
+                                
+                                // Mark the node as dirty to trigger re-execution check
+                                // This will show the node as needing re-execution in the UI
+                                if (currentNode) {
+                                    currentNode.setDirtyCanvas(true, true);
+                                    app.graph.setDirtyCanvas(true, true);
+                                    console.log('[YCGaussianPreview] Node marked as dirty - new video available');
+                                }
+                            } else {
+                                throw new Error(`Upload failed: ${response.status}`);
+                            }
+
+                        } catch (error) {
+                            console.error('[YCGaussianPreview] Error saving video:', error);
+                            
+                            // Show error message in info panel
+                            if (infoPanel) {
+                                infoPanel.innerHTML = `<div style="color: #ff6b6b;">Error saving video: ${error.message}</div>`;
+                            }
                         }
                     }
                     // Handle error messages from iframe
