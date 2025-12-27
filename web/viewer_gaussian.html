@@ -128,6 +128,13 @@
         </div>
         <button id="resetCamera" title="Reset camera view">Reset View</button>
         <button id="screenshot" title="Take screenshot">Screenshot</button>
+        <div class="scale-control">
+            <span>Max Time (s):</span>
+            <input type="number" id="maxRecordTime" min="1" max="600" step="1" value="60" title="Maximum recording time in seconds">
+        </div>
+        <button id="startRecord" title="Start recording video">Start Record</button>
+        <button id="stopRecord" title="Stop recording video" style="display: none; background: #d32f2f;">Stop Record</button>
+        <span id="recordStatus" style="color: #888; font-size: 11px; display: none;"></span>
     </div>
 
     <!-- Load bundled gsplat.js -->
@@ -530,6 +537,181 @@
                 console.error('[GaussianViewer] Screenshot error:', err);
             }
         }
+
+        // Video recording functionality
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordingStartTime = null;
+        let recordingInterval = null;
+        let maxRecordTimeout = null;
+        const startRecordBtn = document.getElementById('startRecord');
+        const stopRecordBtn = document.getElementById('stopRecord');
+        const recordStatus = document.getElementById('recordStatus');
+        const maxRecordTimeInput = document.getElementById('maxRecordTime');
+
+        function startRecording() {
+            if (!canvas || !renderer) {
+                console.error('[GaussianViewer] Cannot start recording: canvas or renderer not available');
+                return;
+            }
+
+            try {
+                // Check if captureStream is supported
+                if (!canvas.captureStream) {
+                    alert('Your browser does not support canvas recording. Please use Chrome, Firefox, or Edge.');
+                    return;
+                }
+
+                // Get max recording time from input
+                const maxRecordTimeSeconds = parseInt(maxRecordTimeInput.value) || 60;
+                if (maxRecordTimeSeconds < 1 || maxRecordTimeSeconds > 600) {
+                    alert('Maximum recording time must be between 1 and 600 seconds.');
+                    return;
+                }
+
+                // Create stream from canvas (30 FPS)
+                const stream = canvas.captureStream(30);
+                
+                // Force MP4 format - check for MP4 support
+                const mp4MimeTypes = [
+                    'video/mp4;codecs=avc1.42E01E',  // H.264 Baseline
+                    'video/mp4;codecs=avc1.4D001E',  // H.264 Main
+                    'video/mp4;codecs=avc1.64001E',  // H.264 High
+                    'video/mp4'                       // Generic MP4
+                ];
+                
+                let selectedMimeType = '';
+                for (const mimeType of mp4MimeTypes) {
+                    if (MediaRecorder.isTypeSupported(mimeType)) {
+                        selectedMimeType = mimeType;
+                        break;
+                    }
+                }
+
+                if (!selectedMimeType) {
+                    alert('Your browser does not support MP4 recording. Please use Chrome, Edge, or Safari.');
+                    return;
+                }
+
+                console.log('[GaussianViewer] Starting recording with MIME type:', selectedMimeType);
+
+                // Create MediaRecorder
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: selectedMimeType,
+                    videoBitsPerSecond: 5000000 // 5 Mbps
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        console.log('[GaussianViewer] Recorded chunk, size:', event.data.size);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    console.log('[GaussianViewer] Recording stopped, total chunks:', recordedChunks.length);
+                    
+                    // Clear timeout if still active
+                    if (maxRecordTimeout) {
+                        clearTimeout(maxRecordTimeout);
+                        maxRecordTimeout = null;
+                    }
+                    
+                    // Create blob from chunks (force MP4 type)
+                    const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+                    console.log('[GaussianViewer] Video blob created, size:', blob.size, 'bytes');
+
+                    // Convert blob to base64 for transmission
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64data = reader.result;
+                        window.parent.postMessage({
+                            type: 'VIDEO_RECORDING',
+                            video: base64data,
+                            mimeType: 'video/mp4',
+                            timestamp: Date.now()
+                        }, '*');
+                        console.log('[GaussianViewer] Video sent to parent window');
+                    };
+                    reader.readAsDataURL(blob);
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error('[GaussianViewer] Recording error:', event.error);
+                    recordStatus.textContent = 'Recording error';
+                    recordStatus.style.color = '#ff6b6b';
+                    stopRecording();
+                };
+
+                // Start recording
+                mediaRecorder.start(1000); // Collect data every second
+                recordingStartTime = Date.now();
+
+                // Update UI
+                startRecordBtn.style.display = 'none';
+                stopRecordBtn.style.display = 'inline-block';
+                recordStatus.style.display = 'inline';
+                recordStatus.textContent = 'Recording...';
+                recordStatus.style.color = '#ff6b6b';
+
+                // Update recording time and check for max time
+                recordingInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    recordStatus.textContent = `Recording... ${minutes}:${seconds.toString().padStart(2, '0')} / ${Math.floor(maxRecordTimeSeconds / 60)}:${(maxRecordTimeSeconds % 60).toString().padStart(2, '0')}`;
+                    
+                    // Check if max time reached
+                    if (elapsed >= maxRecordTimeSeconds) {
+                        console.log('[GaussianViewer] Maximum recording time reached, stopping...');
+                        stopRecording();
+                    }
+                }, 1000);
+
+                // Set timeout to auto-stop at max time
+                maxRecordTimeout = setTimeout(() => {
+                    console.log('[GaussianViewer] Maximum recording time reached (timeout), stopping...');
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        stopRecording();
+                    }
+                }, maxRecordTimeSeconds * 1000);
+
+                console.log('[GaussianViewer] Recording started, max time:', maxRecordTimeSeconds, 'seconds');
+            } catch (err) {
+                console.error('[GaussianViewer] Error starting recording:', err);
+                alert('Failed to start recording: ' + err.message);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                console.log('[GaussianViewer] Stopping recording...');
+            }
+
+            // Clear timeout
+            if (maxRecordTimeout) {
+                clearTimeout(maxRecordTimeout);
+                maxRecordTimeout = null;
+            }
+
+            // Clear interval
+            if (recordingInterval) {
+                clearInterval(recordingInterval);
+                recordingInterval = null;
+            }
+
+            // Update UI
+            startRecordBtn.style.display = 'inline-block';
+            stopRecordBtn.style.display = 'none';
+            recordStatus.textContent = 'Processing video...';
+            recordStatus.style.color = '#6cc';
+        }
+
+        // Event listeners for recording buttons
+        startRecordBtn.addEventListener('click', startRecording);
+        stopRecordBtn.addEventListener('click', stopRecording);
 
         // Gaussian scale control
         const scaleInput = document.getElementById('gaussianScaleValue');
