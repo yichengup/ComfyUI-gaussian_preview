@@ -127,10 +127,9 @@
             <input type="number" id="gaussianScaleValue" min="0.01" max="100" step="0.1" value="1.0" title="Gaussian scale multiplier">
         </div>
         <button id="resetCamera" title="Reset camera view">Reset View</button>
-        <button id="screenshot" title="Take screenshot">Screenshot</button>
         <div class="scale-control">
-            <span>Max Time (s):</span>
-            <input type="number" id="maxRecordTime" min="1" max="600" step="1" value="60" title="Maximum recording time in seconds">
+            <span>Max (s):</span>
+            <input type="number" id="maxRecordTime" min="1" max="600" step="1" value="30" title="Maximum recording time in seconds">
         </div>
         <button id="startRecord" title="Start recording video">Start Record</button>
         <button id="stopRecord" title="Stop recording video" style="display: none; background: #d32f2f;">Stop Record</button>
@@ -460,9 +459,9 @@
                     if (controls) controls.update();
                 }
 
-                // Show info panel
-                infoPanel.classList.remove('hidden');
-                infoContent.innerHTML = `<span style="color:#6cc;">Gaussian Splat Loaded</span><br><span style="color:#888;">${filename}</span>`;
+                // Show info panel - 已禁用，避免遮挡预览
+                // infoPanel.classList.remove('hidden');
+                // infoContent.innerHTML = `<span style="color:#6cc;">Gaussian Splat Loaded</span><br><span style="color:#888;">${filename}</span>`;
 
                 // Notify parent
                 window.parent.postMessage({
@@ -521,22 +520,22 @@
             }
         }
 
-        // Take screenshot
-        function takeScreenshot() {
-            if (!renderer) return;
-
-            try {
-                const dataUrl = canvas.toDataURL('image/png');
-                window.parent.postMessage({
-                    type: 'SCREENSHOT',
-                    image: dataUrl,
-                    timestamp: Date.now()
-                }, '*');
-                console.log('[GaussianViewer] Screenshot captured');
-            } catch (err) {
-                console.error('[GaussianViewer] Screenshot error:', err);
-            }
-        }
+        // Take screenshot - 已删除截图功能
+        // function takeScreenshot() {
+        //     if (!renderer) return;
+        //
+        //     try {
+        //         const dataUrl = canvas.toDataURL('image/png');
+        //         window.parent.postMessage({
+        //             type: 'SCREENSHOT',
+        //             image: dataUrl,
+        //             timestamp: Date.now()
+        //         }, '*');
+        //         console.log('[GaussianViewer] Screenshot captured');
+        //     } catch (err) {
+        //         console.error('[GaussianViewer] Screenshot error:', err);
+        //     }
+        // }
 
         // Video recording functionality
         let mediaRecorder = null;
@@ -563,7 +562,7 @@
                 }
 
                 // Get max recording time from input
-                const maxRecordTimeSeconds = parseInt(maxRecordTimeInput.value) || 60;
+                const maxRecordTimeSeconds = parseInt(maxRecordTimeInput.value) || 30;
                 if (maxRecordTimeSeconds < 1 || maxRecordTimeSeconds > 600) {
                     alert('Maximum recording time must be between 1 and 600 seconds.');
                     return;
@@ -815,7 +814,8 @@
 
         // Event listeners
         document.getElementById('resetCamera').addEventListener('click', resetCamera);
-        document.getElementById('screenshot').addEventListener('click', takeScreenshot);
+        // 截图按钮已删除，事件监听器已移除
+        // document.getElementById('screenshot').addEventListener('click', takeScreenshot);
 
         // Listen for messages from parent
         window.addEventListener('message', (event) => {
