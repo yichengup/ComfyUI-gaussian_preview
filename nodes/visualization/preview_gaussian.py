@@ -42,6 +42,13 @@ class YCGaussianPreviewNode:
                 "intrinsics": ("INTRINSICS", {
                     "tooltip": "3x3 camera intrinsics matrix for FOV"
                 }),
+                "preview_width": ("INT", {
+                    "default": 512,
+                    "min": 256,
+                    "max": 4096,
+                    "step": 64,
+                    "tooltip": "Preview window width in pixels (affects recording resolution)"
+                }),
             },
         }
 
@@ -79,7 +86,7 @@ class YCGaussianPreviewNode:
         # Fallback: return hash of PLY path to ensure node executes at least once
         return hash(ply_path) if ply_path else None
 
-    def preview_gaussian(self, ply_path: str, extrinsics=None, intrinsics=None):
+    def preview_gaussian(self, ply_path: str, extrinsics=None, intrinsics=None, preview_width=512):
         """
         Prepare PLY file for gsplat.js preview.
 
@@ -87,6 +94,7 @@ class YCGaussianPreviewNode:
             ply_path: Path to the Gaussian Splatting PLY file
             extrinsics: Optional 4x4 camera extrinsics matrix
             intrinsics: Optional 3x3 camera intrinsics matrix
+            preview_width: Preview window width in pixels (default: 512)
 
         Returns:
             dict: UI data for frontend widget
@@ -129,6 +137,9 @@ class YCGaussianPreviewNode:
             ui_data["extrinsics"] = [extrinsics]
         if intrinsics is not None:
             ui_data["intrinsics"] = [intrinsics]
+        
+        # Add preview width parameter
+        ui_data["preview_width"] = [preview_width]
 
         # Find the latest recorded video in output directory
         video_path = self._find_latest_recorded_video()
