@@ -1,5 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2025 ComfyUI-GeometryPack Contributors
+# revision author yichengup
 
 """
 Preview Gaussian Splatting PLY files with gsplat.js viewer.
