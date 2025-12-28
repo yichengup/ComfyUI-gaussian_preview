@@ -148,3 +148,9 @@ GPL-3.0-or-later
 - [ComfyUI-GeometryPack 仓库](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) - 原始项目
 - [ComfyUI-Sharp 仓库](https://github.com/PozzettiAndrea/ComfyUI-Sharp)
 - [Apple SHARP](https://github.com/apple/ml-sharp)
+  
+## 关于我 | About me
+Bilibili：[我的B站主页](https://space.bilibili.com/498399023?spm_id_from=333.1007.0.0)
+QQ号：3260561522
+wechat微信: DLONG189one
+
