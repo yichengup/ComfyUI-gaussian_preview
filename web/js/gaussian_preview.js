@@ -70,6 +70,7 @@ app.registerExtension({
 
                 // Store reference to node for dynamic resizing
                 const node = this;
+                let previewWidth = 512;  // Default width, will be updated from parameter
                 let currentNodeSize = [512, 580];
 
                 widget.computeSize = () => currentNodeSize;
@@ -81,7 +82,7 @@ app.registerExtension({
                 // Function to resize node dynamically
                 this.resizeToAspectRatio = function(imageWidth, imageHeight) {
                     const aspectRatio = imageWidth / imageHeight;
-                    const nodeWidth = 512;
+                    const nodeWidth = previewWidth;
                     const viewerHeight = Math.round(nodeWidth / aspectRatio);
                     const nodeHeight = viewerHeight + 60;  // Add space for info panel
 
@@ -104,50 +105,50 @@ app.registerExtension({
 
                 // Listen for messages from iframe
                 window.addEventListener('message', async (event) => {
-                    // Handle screenshot messages
-                    if (event.data.type === 'SCREENSHOT' && event.data.image) {
-                        try {
-                            // Convert base64 data URL to blob
-                            const base64Data = event.data.image.split(',')[1];
-                            const byteString = atob(base64Data);
-                            const arrayBuffer = new ArrayBuffer(byteString.length);
-                            const uint8Array = new Uint8Array(arrayBuffer);
-
-                            for (let i = 0; i < byteString.length; i++) {
-                                uint8Array[i] = byteString.charCodeAt(i);
-                            }
-
-                            const blob = new Blob([uint8Array], { type: 'image/png' });
-
-                            // Generate filename with timestamp
-                            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                            const filename = `gaussian-screenshot-${timestamp}.png`;
-
-                            // Create FormData for upload
-                            const formData = new FormData();
-                            formData.append('image', blob, filename);
-                            formData.append('type', 'output');
-                            formData.append('subfolder', '');
-
-                            // Upload to ComfyUI backend
-                            const response = await fetch('/upload/image', {
-                                method: 'POST',
-                                body: formData
-                            });
-
-                            if (response.ok) {
-                                const result = await response.json();
-                                console.log('[YCGaussianPreview] Screenshot saved:', result.name);
-                            } else {
-                                throw new Error(`Upload failed: ${response.status}`);
-                            }
-
-                        } catch (error) {
-                            console.error('[YCGaussianPreview] Error saving screenshot:', error);
-                        }
-                    }
+                    // Handle screenshot messages - 已删除截图功能
+                    // if (event.data.type === 'SCREENSHOT' && event.data.image) {
+                    //     try {
+                    //         // Convert base64 data URL to blob
+                    //         const base64Data = event.data.image.split(',')[1];
+                    //         const byteString = atob(base64Data);
+                    //         const arrayBuffer = new ArrayBuffer(byteString.length);
+                    //         const uint8Array = new Uint8Array(arrayBuffer);
+                    //
+                    //         for (let i = 0; i < byteString.length; i++) {
+                    //             uint8Array[i] = byteString.charCodeAt(i);
+                    //         }
+                    //
+                    //         const blob = new Blob([uint8Array], { type: 'image/png' });
+                    //
+                    //         // Generate filename with timestamp
+                    //         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    //         const filename = `gaussian-screenshot-${timestamp}.png`;
+                    //
+                    //         // Create FormData for upload
+                    //         const formData = new FormData();
+                    //         formData.append('image', blob, filename);
+                    //         formData.append('type', 'output');
+                    //         formData.append('subfolder', '');
+                    //
+                    //         // Upload to ComfyUI backend
+                    //         const response = await fetch('/upload/image', {
+                    //             method: 'POST',
+                    //             body: formData
+                    //         });
+                    //
+                    //         if (response.ok) {
+                    //             const result = await response.json();
+                    //             console.log('[YCGaussianPreview] Screenshot saved:', result.name);
+                    //         } else {
+                    //             throw new Error(`Upload failed: ${response.status}`);
+                    //         }
+                    //
+                    //     } catch (error) {
+                    //         console.error('[YCGaussianPreview] Error saving screenshot:', error);
+                    //     }
+                    // }
                     // Handle video recording messages
-                    else if (event.data.type === 'VIDEO_RECORDING' && event.data.video) {
+                    if (event.data.type === 'VIDEO_RECORDING' && event.data.video) {
                         try {
                             console.log('[YCGaussianPreview] Received video recording, MIME type:', event.data.mimeType);
                             
@@ -216,7 +217,7 @@ app.registerExtension({
                         }
                     }
                     // Handle error messages from iframe
-                    else if (event.data.type === 'MESH_ERROR' && event.data.error) {
+                    if (event.data.type === 'MESH_ERROR' && event.data.error) {
                         console.error('[YCGaussianPreview] Error from viewer:', event.data.error);
                         if (infoPanel) {
                             infoPanel.innerHTML = `<div style="color: #ff6b6b;">Error: ${event.data.error}</div>`;
@@ -224,7 +225,7 @@ app.registerExtension({
                     }
                 });
 
-                // Set initial node size
+                // Set initial node size (will be updated when preview_width parameter is received)
                 this.setSize([512, 580]);
 
                 // Handle execution
@@ -248,12 +249,26 @@ app.registerExtension({
                         // Extract camera parameters if provided
                         const extrinsics = message.extrinsics?.[0] || null;
                         const intrinsics = message.intrinsics?.[0] || null;
+                        
+                        // Extract preview width parameter (default: 512)
+                        const widthParam = message.preview_width?.[0];
+                        if (widthParam && widthParam >= 256 && widthParam <= 4096) {
+                            previewWidth = widthParam;
+                            console.log("[YCGaussianPreview] Preview width set to:", previewWidth);
+                        }
 
                         // Resize node to match image aspect ratio from intrinsics
                         if (intrinsics && intrinsics[0] && intrinsics[1]) {
                             const imageWidth = intrinsics[0][2] * 2;   // cx * 2
                             const imageHeight = intrinsics[1][2] * 2;  // cy * 2
                             this.resizeToAspectRatio(imageWidth, imageHeight);
+                        } else {
+                            // If no intrinsics, use default height based on preview width
+                            const defaultHeight = Math.round(previewWidth * 0.75) + 60;  // 4:3 aspect ratio + info panel
+                            currentNodeSize = [previewWidth, defaultHeight];
+                            this.setSize(currentNodeSize);
+                            this.setDirtyCanvas(true, true);
+                            app.graph.setDirtyCanvas(true, true);
                         }
 
                         // Update info panel
