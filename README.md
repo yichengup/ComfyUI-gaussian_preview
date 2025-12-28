@@ -2,7 +2,7 @@
 
 ComfyUI 自定义节点，用于预览和录制 3D 高斯点云（Gaussian Splatting）模型。
 
-> **注意**：此节点是从 [ComfyUI-GeometryPack](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) 中提取的预览功能，经过优化并增加了视频录制功能。主要用于预览各种来源生成的高斯 3D 模型，包括但不限于 ComfyUI-Sharp 等工具生成的高斯点云。
+> **注意**：此节点是从 [ComfyUI-GeometryPack](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) 中提取的预览功能，经过优化并增加了**视频录制**功能。主要用于预览各种来源生成的高斯 3D 模型，包括但不限于 ComfyUI-Sharp 等工具生成的高斯点云。
 
 ## 功能特性
 
