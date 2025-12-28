@@ -1,7 +1,7 @@
 # ComfyUI Gaussian Preview
 
-ComfyUI 自定义节点，用于预览和录制 3D 高斯点云（Gaussian Splatting）模型。
-
+ComfyUI 自定义节点，用于**预览和录制** 3D 高斯点云（Gaussian Splatting）模型。
+### 可高分辨率录制视频
 > **注意**：此节点是从 [ComfyUI-GeometryPack](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) 中提取的预览功能，经过优化并增加了**视频录制**功能。主要用于预览各种来源生成的高斯 3D 模型，包括但不限于 ComfyUI-Sharp 等工具生成的高斯点云。
 
 ## 功能特性
@@ -134,13 +134,6 @@ git clone https://github.com/your-username/ComfyUI-gaussian_preview.git
 
 GPL-3.0-or-later
 
-## 致谢
-
-- [ComfyUI-GeometryPack](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) - 原始预览功能来源
-- [ComfyUI-Sharp](https://github.com/PozzettiAndrea/ComfyUI-Sharp) - 提供高斯点云生成功能
-- Apple SHARP - 原始模型
-- gsplat.js - 3D 高斯点云渲染库
-
 ## 项目历史
 
 此项目是从 [ComfyUI-GeometryPack](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) 中提取的预览功能，经过以下优化：
@@ -150,8 +143,8 @@ GPL-3.0-or-later
 - 优化了用户界面和交互体验
 - 提升了性能和稳定性
 
-## 相关链接
+## 致谢
 
 - [ComfyUI-GeometryPack 仓库](https://github.com/PozzettiAndrea/ComfyUI-GeometryPack) - 原始项目
 - [ComfyUI-Sharp 仓库](https://github.com/PozzettiAndrea/ComfyUI-Sharp)
-- [SHARP 论文](https://github.com/apple/ml-sharp)
+- [Apple SHARP](https://github.com/apple/ml-sharp)
